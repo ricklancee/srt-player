@@ -17,7 +17,6 @@ const parser = new srtParser2();
 const parsedSrt = parser.fromSrt(srt);
 
 type SRT = (typeof parsedSrt)[0];
-console.log(parsedSrt);
 
 function Subtitle({ srtText, shadow }: { srtText: string; shadow?: boolean }) {
   const html = DOMPurify.sanitize(srtText.replace(/\n/g, "<br />"), {
@@ -27,7 +26,7 @@ function Subtitle({ srtText, shadow }: { srtText: string; shadow?: boolean }) {
 
   return (
     <div
-      className={`font-[Arial] text-center text-white font-semibold text-[clamp(1rem,8vw,4rem)] leading-snug ${
+      className={`font-[Arial] text-center text-white font-semibold text-[clamp(1rem,5vw,2.5rem)] leading-snug ${
         shadow ? "scale-30 opacity-20" : ""
       }`}
       dangerouslySetInnerHTML={{ __html: html }}
@@ -58,7 +57,7 @@ function SubtitleBar({
           <div
             key={index}
             onClick={() => onClick?.(srts[index], index)}
-            className="w-[1px] h-full bg-blue-50 absolute top-0 hover:scale-y-150 hover:scale-x-200 opacity-50 hover:opacity-100"
+            className="w-[1px] h-full bg-[#8936FF]/30 absolute top-0 hover:scale-y-150 hover:scale-x-200 opacity-50 hover:opacity-100"
             style={{ left: `${percent}%` }}
           />
         );
@@ -95,17 +94,21 @@ function App() {
   }, [displayedSrt]);
 
   return (
-    <main className="h-svh w-svw flex flex-col" ref={mainRef}>
+    <main className="h-svh w-svw flex flex-col relative" ref={mainRef}>
       {document.fullscreenEnabled && (
         <div
           className="position fixed top-0 right-0 p-4"
           onClick={() => handleToggleFullscreen()}
         >
-          {isFullscreen ? <Shrink /> : <Expand />}
+          {isFullscreen ? (
+            <Shrink className="text-[#8936FF] hover:text-white transition-colors" />
+          ) : (
+            <Expand className="text-[#8936FF] hover:text-white transition-colors" />
+          )}
         </div>
       )}
       {displayedSrt && (
-        <div className="flex-1 items-center justify-center flex">
+        <div className="fixed inset-0 z-0 items-center justify-center flex">
           <div>
             <div className="flex items-center justify-center w-full">
               <div className="text-center">
@@ -118,60 +121,62 @@ function App() {
           </div>
         </div>
       )}
-      <div className="mt-auto">
-        <div className="flex justify-between items-center p-4 text-white">
-          <button
-            type="button"
-            onClick={() => {
-              const currentIndex = currentSrtIndex ?? 0;
-              const srt = parsedSrt[Math.max(currentIndex - 1, 0)];
+      <div className="mt-auto z-10">
+        <div>
+          <div className="flex justify-between items-center p-4 text-white">
+            <button
+              type="button"
+              onClick={() => {
+                const currentIndex = currentSrtIndex ?? 0;
+                const srt = parsedSrt[Math.max(currentIndex - 1, 0)];
 
-              reset(getOffsetTimeFromSrt(srt), isRunning);
-            }}
-          >
-            <ArrowLeft />
-          </button>
-          {isRunning ? (
-            <button onClick={() => pause()}>
-              <Pause />
+                reset(getOffsetTimeFromSrt(srt), isRunning);
+              }}
+            >
+              <ArrowLeft className="text-[#8936FF] hover:text-white transition-colors" />
             </button>
-          ) : (
-            <button onClick={() => start()}>
-              <Play />
+            {isRunning ? (
+              <button onClick={() => pause()}>
+                <Pause className="text-[#8936FF] hover:text-white transition-colors" />
+              </button>
+            ) : (
+              <button onClick={() => start()}>
+                <Play className="text-[#8936FF] hover:text-white transition-colors" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                const currentIndex = currentSrtIndex ?? 0;
+                setCurrentSrtIndex(
+                  Math.min(currentIndex + 1, parsedSrt.length - 1)
+                );
+
+                const srt =
+                  parsedSrt[Math.min(currentIndex + 1, parsedSrt.length - 1)];
+
+                reset(getOffsetTimeFromSrt(srt), isRunning);
+              }}
+            >
+              <ArrowRight className="text-[#8936FF] hover:text-white transition-colors" />
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              const currentIndex = currentSrtIndex ?? 0;
-              setCurrentSrtIndex(
-                Math.min(currentIndex + 1, parsedSrt.length - 1)
-              );
-
-              const srt =
-                parsedSrt[Math.min(currentIndex + 1, parsedSrt.length - 1)];
-
-              reset(getOffsetTimeFromSrt(srt), isRunning);
-            }}
-          >
-            <ArrowRight />
-          </button>
-        </div>
-        <div className="w-full">
-          <div className="flex justify-center items-center p-2 text-white">
-            <span className="text-sm text-gray-500">
-              {formatSrtTimestamp(totalMilliseconds)}
-            </span>
           </div>
-          <SubtitleBar
-            srts={parsedSrt}
-            onClick={(srt, index) => {
-              setCurrentSrtIndex(index);
+          <div className="w-full">
+            <div className="flex justify-center items-center p-2 text-white">
+              <span className="text-sm text-gray-500">
+                {formatSrtTimestamp(totalMilliseconds)}
+              </span>
+            </div>
+            <SubtitleBar
+              srts={parsedSrt}
+              onClick={(srt, index) => {
+                setCurrentSrtIndex(index);
 
-              reset(getOffsetTimeFromSrt(srt), isRunning);
-            }}
-          />
+                reset(getOffsetTimeFromSrt(srt), isRunning);
+              }}
+            />
+          </div>
         </div>
       </div>
     </main>
