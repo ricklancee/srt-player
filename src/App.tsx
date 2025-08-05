@@ -69,7 +69,13 @@ function SubtitleBar({
   );
 }
 
-const Player = ({ subtitles }: { subtitles: SRT[] }) => {
+const Player = ({
+  subtitles,
+  startIndex,
+}: {
+  subtitles: SRT[];
+  startIndex?: number;
+}) => {
   const mainRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -80,6 +86,10 @@ const Player = ({ subtitles }: { subtitles: SRT[] }) => {
 
   const { totalMilliseconds, start, pause, isRunning, reset } = useStopwatch({
     autoStart: false,
+    offsetTimestamp:
+      startIndex !== undefined
+        ? getOffsetByIndex(subtitles, startIndex)
+        : undefined,
     interval: 20,
   });
 
@@ -91,6 +101,7 @@ const Player = ({ subtitles }: { subtitles: SRT[] }) => {
     if (displayedSrt) {
       const currentIndex = subtitles.indexOf(displayedSrt);
       setCurrentSrtIndex(currentIndex);
+      localStorage.setItem("srt_position", currentIndex.toString());
     } else {
       setCurrentSrtIndex(null);
     }
@@ -100,7 +111,7 @@ const Player = ({ subtitles }: { subtitles: SRT[] }) => {
     <main className="h-svh w-svw flex flex-col relative" ref={mainRef}>
       {document.fullscreenEnabled && (
         <div
-          className="position fixed top-0 right-0 p-4"
+          className=" fixed top-0 right-0 p-4 z-30"
           onClick={() => handleToggleFullscreen()}
         >
           {isFullscreen ? (
@@ -110,6 +121,16 @@ const Player = ({ subtitles }: { subtitles: SRT[] }) => {
           )}
         </div>
       )}
+      <button
+        onClick={() => {
+          localStorage.removeItem("srt_raw");
+          localStorage.removeItem("srt_position");
+          window.location.reload();
+        }}
+        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-white z-30"
+      >
+        Reset
+      </button>
       {displayedSrt && (
         <div className="fixed inset-0 z-0 items-center justify-center flex">
           <div>
@@ -198,6 +219,8 @@ function SubtitleUploader({ onParsed }: { onParsed: (parsed: SRT[]) => void }) {
         const text = reader.result as string;
         const parser = new srtParser2();
         const parsed = parser.fromSrt(text);
+        localStorage.setItem("srt_raw", JSON.stringify(parsed));
+        localStorage.removeItem("srt_position");
         onParsed(parsed);
       } catch (err) {
         alert("Invalid SRT file.");
@@ -223,21 +246,51 @@ function SubtitleUploader({ onParsed }: { onParsed: (parsed: SRT[]) => void }) {
 }
 
 function App() {
-  const [subs, setSubs] = useState<SRT[]>([]);
+  const [state, setState] = useState<{ subs: SRT[]; startIndex?: number }>({
+    subs: [],
+    startIndex: undefined,
+  });
+  const [loading, setLoading] = useState(true);
 
-  if (subs.length === 0) {
+  useEffect(() => {
+    const storedRaw = localStorage.getItem("srt_raw");
+    let subs: SRT[] = [];
+    if (storedRaw) {
+      try {
+        subs = JSON.parse(storedRaw);
+      } catch {
+        /* empty */
+      }
+    }
+
+    const storedPosition = localStorage.getItem("srt_position");
+    let startIndex: number | undefined = undefined;
+    if (storedPosition) {
+      const position = parseInt(storedPosition, 10);
+      if (!isNaN(position) && position >= 0) {
+        startIndex = position;
+      }
+    }
+
+    setState({ subs, startIndex });
+    setLoading(false);
+  }, []);
+
+  if (loading) return null;
+
+  if (state.subs.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen">
         <SubtitleUploader
           onParsed={(parsed) => {
-            setSubs(parsed);
+            setState({ subs: parsed, startIndex: undefined });
           }}
         />
       </div>
     );
   }
 
-  return <Player subtitles={subs} />;
+  return <Player subtitles={state.subs} startIndex={state.startIndex} />;
 }
 
 function getOffsetTimeFromSrt(srt: SRT) {
@@ -297,4 +350,22 @@ function toggleFullscreen(el: HTMLElement | null) {
   } else {
     document.exitFullscreen();
   }
+}
+
+function getOffsetByIndex(subtitles: SRT[], index: number): Date | undefined {
+  if (index < 0 || index >= subtitles.length) {
+    return undefined;
+  }
+
+  const srt = subtitles[index];
+  const baseSeconds = Math.floor(srt.startSeconds);
+  const extraMilliseconds = srt.startTime.includes(",")
+    ? parseInt(srt.startTime.split(",")[1], 10)
+    : 0;
+
+  const offsetTime = new Date();
+  offsetTime.setSeconds(offsetTime.getSeconds() + baseSeconds);
+  offsetTime.setMilliseconds(offsetTime.getMilliseconds() + extraMilliseconds);
+
+  return offsetTime;
 }
