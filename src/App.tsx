@@ -3,8 +3,15 @@ import srt from "./test.srt?raw";
 
 import { useStopwatch } from "react-timer-hook";
 import DOMPurify from "dompurify";
-import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Expand,
+  Pause,
+  Play,
+  Shrink,
+} from "lucide-react";
 const parser = new srtParser2();
 
 const parsedSrt = parser.fromSrt(srt);
@@ -61,6 +68,14 @@ function SubtitleBar({
 }
 
 function App() {
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const handleToggleFullscreen = () => {
+    toggleFullscreen(mainRef.current);
+    setIsFullscreen(!isFullscreen);
+  };
+
   const { totalMilliseconds, start, pause, isRunning, reset } = useStopwatch({
     autoStart: false,
     interval: 20,
@@ -80,7 +95,13 @@ function App() {
   }, [displayedSrt]);
 
   return (
-    <main className="h-svh w-svw flex flex-col">
+    <main className="h-svh w-svw flex flex-col" ref={mainRef}>
+      <div
+        className="position fixed top-0 right-0 p-4"
+        onClick={() => handleToggleFullscreen()}
+      >
+        {isFullscreen ? <Shrink /> : <Expand />}
+      </div>
       {displayedSrt && (
         <div className="flex-1 items-center justify-center flex">
           <div>
@@ -202,4 +223,14 @@ function getCurrentSrt(totalMilliseconds: number, srts: SRT[]): SRT | null {
       return totalMilliseconds >= start && totalMilliseconds < end;
     }) ?? null
   );
+}
+
+function toggleFullscreen(el: HTMLElement | null) {
+  if (!el) return;
+
+  if (!document.fullscreenElement) {
+    el.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
 }
