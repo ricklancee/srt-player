@@ -40,8 +40,10 @@ function Subtitle({ srtText, shadow }: { srtText: string; shadow?: boolean }) {
 function SubtitleBar({
   srts,
   onClick,
+  currentSrtIndex,
 }: {
   srts: SRT[];
+  currentSrtIndex: number;
   onClick?: (srt: SRT, index: number) => void;
 }) {
   const amountOfSrts = srts.length;
@@ -60,7 +62,11 @@ function SubtitleBar({
           <div
             key={index}
             onClick={() => onClick?.(srts[index], index)}
-            className="w-[1px] h-full bg-[#8936FF]/30 absolute top-0 hover:scale-y-150 hover:scale-x-200 opacity-50 hover:opacity-100"
+            className={`w-[1px] h-full bg-[var(--color-theme)]/30 absolute top-0 hover:scale-y-150 hover:scale-x-200 opacity-50 hover:opacity-100 ${
+              index === currentSrtIndex
+                ? "bg-white scale-y-150 scale-x-200 opacity-100"
+                : ""
+            }`}
             style={{ left: `${percent}%` }}
           />
         );
@@ -102,8 +108,6 @@ const Player = ({
       const currentIndex = subtitles.indexOf(displayedSrt);
       setCurrentSrtIndex(currentIndex);
       localStorage.setItem("srt_position", currentIndex.toString());
-    } else {
-      setCurrentSrtIndex(null);
     }
   }, [displayedSrt, subtitles]);
 
@@ -115,9 +119,9 @@ const Player = ({
           onClick={() => handleToggleFullscreen()}
         >
           {isFullscreen ? (
-            <Shrink className="text-[#8936FF] hover:text-white transition-colors" />
+            <Shrink className="text-[var(--color-theme)] hover:text-white transition-colors" />
           ) : (
-            <Expand className="text-[#8936FF] hover:text-white transition-colors" />
+            <Expand className="text-[var(--color-theme)] hover:text-white transition-colors" />
           )}
         </div>
       )}
@@ -157,15 +161,15 @@ const Player = ({
                 reset(getOffsetTimeFromSrt(srt), isRunning);
               }}
             >
-              <ArrowLeft className="text-[#8936FF] hover:text-white transition-colors" />
+              <ArrowLeft className="text-[var(--color-theme)] hover:text-white transition-colors" />
             </button>
             {isRunning ? (
               <button onClick={() => pause()}>
-                <Pause className="text-[#8936FF] hover:text-white transition-colors" />
+                <Pause className="text-[var(--color-theme)] hover:text-white transition-colors" />
               </button>
             ) : (
               <button onClick={() => start()}>
-                <Play className="text-[#8936FF] hover:text-white transition-colors" />
+                <Play className="text-[var(--color-theme)] hover:text-white transition-colors" />
               </button>
             )}
 
@@ -183,7 +187,7 @@ const Player = ({
                 reset(getOffsetTimeFromSrt(srt), isRunning);
               }}
             >
-              <ArrowRight className="text-[#8936FF] hover:text-white transition-colors" />
+              <ArrowRight className="text-[var(--color-theme)] hover:text-white transition-colors" />
             </button>
           </div>
           <div className="w-full">
@@ -194,6 +198,7 @@ const Player = ({
             </div>
             <SubtitleBar
               srts={subtitles}
+              currentSrtIndex={currentSrtIndex ?? 0}
               onClick={(srt, index) => {
                 setCurrentSrtIndex(index);
 
@@ -233,7 +238,7 @@ function SubtitleUploader({ onParsed }: { onParsed: (parsed: SRT[]) => void }) {
 
   return (
     <label className="group cursor-pointer flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/5 px-6 py-10 text-white transition hover:bg-white/10">
-      <Upload className="size-10 text-[#8936FF] group-hover:scale-110 transition-transform" />
+      <Upload className="size-10 text-[var(--color-theme)] group-hover:scale-110 transition-transform" />
       <span className="text-lg font-medium">Upload SRT File</span>
       <input
         type="file"
