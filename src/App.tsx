@@ -12,6 +12,7 @@ import {
   Shrink,
   Upload,
 } from "lucide-react";
+import { Chrome, type ColorResult } from "@uiw/react-color";
 
 type SRT = {
   startSeconds: number;
@@ -75,12 +76,56 @@ function SubtitleBar({
   );
 }
 
+function ColorPicker({ defaultColor = "#ffffff" }: { defaultColor?: string }) {
+  const [hex, setHex] = useState(defaultColor);
+  const [isOpen, setIsOpen] = useState(false);
+  const lastUpdateRef = useRef(0);
+  const throttleMs = 100;
+
+  const handleChange = (color: ColorResult) => {
+    setHex(color.hexa);
+
+    const now = Date.now();
+    if (now - lastUpdateRef.current > throttleMs) {
+      document.documentElement.style.setProperty("--color-theme", color.hexa);
+      lastUpdateRef.current = now;
+      localStorage.setItem("theme_color", color.hexa);
+    }
+  };
+
+  return (
+    <div>
+      <span
+        className="fixed top-4 left-4 text-xs text-gray-400 hover:text-white z-30"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        Change Theme Color
+      </span>
+      {isOpen && (
+        <Chrome
+          className="fixed top-10 left-4 z-30"
+          color={hex}
+          onChange={handleChange}
+        />
+      )}
+      {isOpen && (
+        <div
+          className="w-[100vw] h-[100vh] fixed inset-0 z-20"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 const Player = ({
   subtitles,
   startIndex,
+  themeColor,
 }: {
   subtitles: SRT[];
   startIndex?: number;
+  themeColor?: string;
 }) => {
   const mainRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -113,6 +158,7 @@ const Player = ({
 
   return (
     <main className="h-svh w-svw flex flex-col relative" ref={mainRef}>
+      <ColorPicker defaultColor={themeColor} />
       {document.fullscreenEnabled && (
         <div
           className=" fixed top-0 right-0 p-4 z-30"
@@ -251,9 +297,14 @@ function SubtitleUploader({ onParsed }: { onParsed: (parsed: SRT[]) => void }) {
 }
 
 function App() {
-  const [state, setState] = useState<{ subs: SRT[]; startIndex?: number }>({
+  const [state, setState] = useState<{
+    subs: SRT[];
+    startIndex?: number;
+    themeColor: string;
+  }>({
     subs: [],
     startIndex: undefined,
+    themeColor: "#8936FF", // Default theme color
   });
   const [loading, setLoading] = useState(true);
 
@@ -277,7 +328,15 @@ function App() {
       }
     }
 
-    setState({ subs, startIndex });
+    const storedThemeColor = localStorage.getItem("theme_color");
+    let themeColor: string = "#8936FF"; // Default theme color
+
+    if (storedThemeColor) {
+      themeColor = storedThemeColor;
+      document.documentElement.style.setProperty("--color-theme", themeColor);
+    }
+
+    setState({ subs, startIndex, themeColor: themeColor });
     setLoading(false);
   }, []);
 
@@ -288,14 +347,24 @@ function App() {
       <div className="flex items-center justify-center h-screen">
         <SubtitleUploader
           onParsed={(parsed) => {
-            setState({ subs: parsed, startIndex: undefined });
+            setState({
+              subs: parsed,
+              startIndex: undefined,
+              themeColor: state.themeColor,
+            });
           }}
         />
       </div>
     );
   }
 
-  return <Player subtitles={state.subs} startIndex={state.startIndex} />;
+  return (
+    <Player
+      subtitles={state.subs}
+      startIndex={state.startIndex}
+      themeColor={state.themeColor}
+    />
+  );
 }
 
 function getOffsetTimeFromSrt(srt: SRT) {

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
+    "@uiw/react-color": "^2.7.3",
     "dompurify": "^3.2.6",
     "lucide-react": "^0.536.0",
     "react": "^19.1.0",
