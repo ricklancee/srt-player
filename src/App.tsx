@@ -96,12 +96,14 @@ function App() {
 
   return (
     <main className="h-svh w-svw flex flex-col" ref={mainRef}>
-      <div
-        className="position fixed top-0 right-0 p-4"
-        onClick={() => handleToggleFullscreen()}
-      >
-        {isFullscreen ? <Shrink /> : <Expand />}
-      </div>
+      {document.fullscreenEnabled && (
+        <div
+          className="position fixed top-0 right-0 p-4"
+          onClick={() => handleToggleFullscreen()}
+        >
+          {isFullscreen ? <Shrink /> : <Expand />}
+        </div>
+      )}
       {displayedSrt && (
         <div className="flex-1 items-center justify-center flex">
           <div>
