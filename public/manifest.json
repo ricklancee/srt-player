@@ -21,6 +21,6 @@
   "lang": "en-US",
   "name": "SRT Player",
   "short_name": "SRTp",
-  "start_url": "https://ricklancee.github.io/srt-player/",
-  "scope": "https://ricklancee.github.io/srt-player/"
+  "start_url": "./",
+  "scope": "./"
 }
