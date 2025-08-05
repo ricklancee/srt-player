@@ -1,5 +1,4 @@
 import srtParser2 from "srt-parser-2";
-import srt from "./test.srt?raw";
 
 import { useStopwatch } from "react-timer-hook";
 import DOMPurify from "dompurify";
@@ -11,12 +10,16 @@ import {
   Pause,
   Play,
   Shrink,
+  Upload,
 } from "lucide-react";
-const parser = new srtParser2();
 
-const parsedSrt = parser.fromSrt(srt);
-
-type SRT = (typeof parsedSrt)[0];
+type SRT = {
+  startSeconds: number;
+  startTime: string;
+  endSeconds: number;
+  endTime: string;
+  text: string;
+};
 
 function Subtitle({ srtText, shadow }: { srtText: string; shadow?: boolean }) {
   const html = DOMPurify.sanitize(srtText.replace(/\n/g, "<br />"), {
@@ -66,7 +69,7 @@ function SubtitleBar({
   );
 }
 
-function App() {
+const Player = ({ subtitles }: { subtitles: SRT[] }) => {
   const mainRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -82,16 +85,16 @@ function App() {
 
   const [currentSrtIndex, setCurrentSrtIndex] = useState<number | null>(null);
 
-  const displayedSrt = getCurrentSrt(totalMilliseconds, parsedSrt);
+  const displayedSrt = getCurrentSrt(totalMilliseconds, subtitles);
 
   useEffect(() => {
     if (displayedSrt) {
-      const currentIndex = parsedSrt.indexOf(displayedSrt);
+      const currentIndex = subtitles.indexOf(displayedSrt);
       setCurrentSrtIndex(currentIndex);
     } else {
       setCurrentSrtIndex(null);
     }
-  }, [displayedSrt]);
+  }, [displayedSrt, subtitles]);
 
   return (
     <main className="h-svh w-svw flex flex-col relative" ref={mainRef}>
@@ -128,7 +131,7 @@ function App() {
               type="button"
               onClick={() => {
                 const currentIndex = currentSrtIndex ?? 0;
-                const srt = parsedSrt[Math.max(currentIndex - 1, 0)];
+                const srt = subtitles[Math.max(currentIndex - 1, 0)];
 
                 reset(getOffsetTimeFromSrt(srt), isRunning);
               }}
@@ -150,11 +153,11 @@ function App() {
               onClick={() => {
                 const currentIndex = currentSrtIndex ?? 0;
                 setCurrentSrtIndex(
-                  Math.min(currentIndex + 1, parsedSrt.length - 1)
+                  Math.min(currentIndex + 1, subtitles.length - 1)
                 );
 
                 const srt =
-                  parsedSrt[Math.min(currentIndex + 1, parsedSrt.length - 1)];
+                  subtitles[Math.min(currentIndex + 1, subtitles.length - 1)];
 
                 reset(getOffsetTimeFromSrt(srt), isRunning);
               }}
@@ -169,7 +172,7 @@ function App() {
               </span>
             </div>
             <SubtitleBar
-              srts={parsedSrt}
+              srts={subtitles}
               onClick={(srt, index) => {
                 setCurrentSrtIndex(index);
 
@@ -181,6 +184,60 @@ function App() {
       </div>
     </main>
   );
+};
+
+function SubtitleUploader({ onParsed }: { onParsed: (parsed: SRT[]) => void }) {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        const text = reader.result as string;
+        const parser = new srtParser2();
+        const parsed = parser.fromSrt(text);
+        onParsed(parsed);
+      } catch (err) {
+        alert("Invalid SRT file.");
+        console.error(err);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  return (
+    <label className="group cursor-pointer flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/5 px-6 py-10 text-white transition hover:bg-white/10">
+      <Upload className="size-10 text-[#8936FF] group-hover:scale-110 transition-transform" />
+      <span className="text-lg font-medium">Upload SRT File</span>
+      <input
+        type="file"
+        accept=".srt"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+    </label>
+  );
+}
+
+function App() {
+  const [subs, setSubs] = useState<SRT[]>([]);
+
+  if (subs.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <SubtitleUploader
+          onParsed={(parsed) => {
+            setSubs(parsed);
+          }}
+        />
+      </div>
+    );
+  }
+
+  return <Player subtitles={subs} />;
 }
 
 function getOffsetTimeFromSrt(srt: SRT) {
