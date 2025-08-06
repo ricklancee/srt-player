@@ -202,9 +202,13 @@ const Player = ({
               type="button"
               onClick={() => {
                 const currentIndex = currentSrtIndex ?? 0;
-                const srt = subtitles[Math.max(currentIndex - 1, 0)];
+                if (currentIndex === 0) {
+                  reset(new Date(), isRunning);
+                } else {
+                  const srt = subtitles[Math.max(currentIndex - 1, 0)];
 
-                reset(getOffsetTimeFromSrt(srt), isRunning);
+                  reset(getOffsetTimeFromSrt(srt), isRunning);
+                }
               }}
             >
               <ArrowLeft className="text-[var(--color-theme)] hover:text-white transition-colors" />
